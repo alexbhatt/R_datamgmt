@@ -1,0 +1,574 @@
+---
+title: "R Data Management"
+author: "Alex Bhattacharya"
+date: "`r format(Sys.Date(),'%d %b %Y')`"
+code_folding: "hide"
+output:
+  html_document:
+    theme: yeti 
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+  word_document:
+    toc: yes
+    toc_depth: '4'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = FALSE)
+options(scipen=999)
+```
+# Data in R
+
+If you're coming from Stata, well then this part kinda sucks. R can hold multiple bits of data. I say bits because that can include a single number or string, or a combination of related/same type (vectors) or unrelated/different types (lists) of data. Or, it can be what we more traditionally think of a rectangular data set, called a data frame made up of columns of vectors, or rows of matching lists.
+
+## Objects
+
+When you're totally confused and reading on StackOverflow or some other R blog on how to do a thing. You'll see people refering to objects. This is when you store a thing in a thing using the assignment operator `<-`. This means store the thing on the right of the `<-` in an object called the thing on the left of the `<-`. 
+
+When you're working in R, all your objects are stored in your "Global Environment". Think of it like your desk. Anything on the desk is fair game. But unless you save the object using `<-`, its not on your desk, its not in the environment. 
+
+## Data types
+
+Data can be a few things, but it comes down to three simple types in R. Numbers, characters (strings), and logical (TRUE/FALSE). Like Stata, dates are also a pain and have their own extra format but are still just numbers; [a quick 1 pg help on dates in R can be found here](https://www.statmethods.net/input/dates.html).
+
+The table below has the three data types shown.
+
+```{r object_types} 
+# these are vectors, they all have the same type
+film <- c("A New Hope", "The Empire Strikes Back", "Return of the Jedi","The Phantom Menace","Attack of the Clones","Revenge of the Sith","The Force Awakens","Rogue One","The Last Jedi")
+ep <- c(4,5,6,1,2,3,7,3.5,8)
+rank <- c(2,1,4,8,7,9,5,3,6)
+jarjar <- c(F,F,F,T,T,T,F,F,F)
+
+# put vectors together as columns in a data frame
+sw <-  data.frame(film,ep,rank,jarjar)  
+
+# put some nice headers on those
+names(sw) <- c("Film", "Episode","Rank","Has Jar Jar Binks")
+
+# print it out so you can see
+sw
+```
+
+here is a row from the data frame, an example of a list (but not actually a list because its in a data frame)
+read as from the sw data, take the 2nd row, and columns 1 to 3
+
+```{r list}
+# the row from the data
+sw[2,1:3]
+
+# an actual list
+list("The Empire Strikes Back",2,1)
+```
+
+I recommend doing a free datacamp [intro to R](https://www.datacamp.com/courses/free-introduction-to-r) to help understand the basics. In fact, I'm just going to assume you've done this for the rest of this training. It will explain objects, assignment and data types and how to access, subset and/or combine data using basic R. Seriously, just do the datacamp, it can explain this all better than me.
+
+
+# Setup and Import
+
+## Install and load packages
+
+R has a base code, which is default. However, people have built packages which contain functions. These functions can make your life easier as they can help with processes in a way which is simpler than using base R. We're gonna use the tidyverse package and syntax from here on out.
+
+```{r install, eval=FALSE, message=FALSE, results='hide', echo=FALSE}
+# install the packages you need for your code
+required_packages <- c("tidyverse","openxlsx","lubridate")
+install.packages(required_packages)
+```
+
+This training will use the [tidyverse]("https://www.tidyverse.org/packages/") packages. These are a set of well maintained packages geared for data science with a strong support network. Please note that some of the tasks are out of order. This is because this training is paired in STATA for those of you who (like me) had to make the transition and find a translation helpful. [The STATA version of the training found here]("https://alexbhatt.gitbooks.io/stata-training/").
+
+Key to the tidyverse is that all related packages use a similar shared syntax and make use of the pipe `%>%` which allows you to chain together commands in an ordered seqeuence. Importantly, the results of each line are used for the evaluation of the next.
+
+By using `library(tidyverse)` you are actually loading in a series of packages. `lubridate` is not packaged with `tidyverse` but uses the same syntax and works seamlessly. It is a package just for using dates (and date related math) in R. R does not natively open excel xls/xlsx files, `openxlsx` is a great tool for reading/writing xlsx files.
+
+```{r library, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(lubridate)
+library(openxlsx)
+```
+
+> TASK 1: set the working directory to your project folder
+
+This should always be in the first set of commands within your R code. The only exception to this is if you are working in an Rmarkdown file (`.Rmd`). These default the working directory to the folder where the `.Rmd` file is stored. It is how you will navigate around the different files that you will be accessing or creating. It also means that if someone wants to use your code, and they have the files, they only have to change the directory here, and not every time a file is referenced within the code.
+
+R requires you use the `/`  or `\\` for file paths as `\` is an escape character. Escape characters are used before another character to inform the program (R) that the next character is not meant to be intrepreted as code. For example, in `\\` the first `\` is an escape, to allow you to use the second `\` as the backslash in a filepath.
+
+```{r setwd, eval=FALSE}
+setwd("F:/alex.bhattacharya/teaching/code/data_management_tutorial")
+```
+
+
+
+## Import the data
+
+> TASK 2: import the spreadsheets from the data folder into Stata without making any modifications in excel
+
+Lets start small. Here we are going to learn how to bring data from spreadsheets into R. This is the most common way that you will receive data, and is an essential skill. Take a look, its different for csv vs xlsx. 
+
+Remember, unlike Stata, R can have multiple datasets stored as objects in the environment at a time. The consequence is that we always have to tell R which dataset we're actually talking about.
+
+As mentioned previously, R will natively import a `.csv` but will not do the same for `.xls/.xsx` files. We use the native `read.csv` from base R, and `read.xlsx` from `openxlsx` to read in the data.
+
+```{r import_data}
+# the ./ means home directory then the subfolders afterwards
+dt15 <- read.csv("./r_datamgmt/data/line_list_2015.csv", stringsAsFactors=FALSE)
+dt16 <- read.xlsx("./r_datamgmt/data/line_list.xlsx", sheet="2016", detectDates=TRUE)
+dt17 <- read.xlsx("./r_datamgmt/data/line_list.xlsx", sheet="2017", detectDates=TRUE)
+```
+
+> TASK 3: explore the tables, note any differences and modify the tables so that they have the same structure, save each of your modified tables
+
+> TASK 7: format your dates
+
+Because we have three slightly different datasets, it is helpful to make changes to the individual datasets to standardise them. Use `glimpse()` to browse the datasets and gt a preview of whats happening. 
+Always spend a little time looking at your data, particularly when it's fragmented like this. How you look at your data will be a personal preference, however, there are several tools within R available to you to aid this exploration. 
+
+When you explore your data:
+
++ take a look at the structure of the data
++ what are the names of the variables
++ are they of the same type (character,numeric,date,logical)
+
+
+```{r explore_data}
+# look inside, what are the differences
+glimpse(dt15)
+glimpse(dt16)
+glimpse(dt17)
+
+## 2015 data
+dt15 <- dt15 %>% 
+  mutate(healthcare_id=as.character(healthcare_id), # changing type format
+         birth_date=ymd(birth_date),
+         specimen_date=ymd(specimen_date)) # set the date format
+
+## 2016 data
+dt16 <- dt16 %>% 
+  rename(specimen_id=specimen_number)
+
+## 2017 data
+names(dt17) <- tolower(names(dt17)) # changing all the varnames to lowercase
+dt17 <- dt17 %>% 
+  rename(lab=lab_id)
+```
+
+> TASK 4: append the tables
+
+> TASK 5: save your new appended dataset with all three years data 
+
+We went through all the trouble of standardising so that we can join our datasets into a single cohesive dataset. Join them top to bottom. Take a look at the new combined dataset using glimpse again. How many observations are there; is that what you expected?
+
+```{r append}
+# combine the tables now that they have the same data types and names in each of the columns
+# store that new guy as an object
+# bind_rows appends data top to bottom
+# if columns dont match up they will be created as new variables
+# if the data types dont match up, they will drop the results of the mismatched data and retain the type of the topmost dataset
+dt <- bind_rows(dt15,dt16,dt17)
+
+glimpse(dt)
+```
+
+# Data Cleaning
+This is when you modify your data by changing the original values within the dataset. It is important to record any and all changes in the R code, to ensure that you and others can reproduce the results in the future. Always leave comments as to why changes were made. Remember, we never change the original dataset; we will save these changes as a new version of the dataset.
+
+The purpose of data cleaning is to make our data as consistent as possible in preparation for analysis. This may include activities such as: formatting or recoding data, removing duplicate entries and accounting for missing data. This may also be referred to as having "tidy" data. Simply put, a clean dataset is easier to work with and a tidy dataset is easier to manage. Combined, having a a clean and tidy dataset will result in fewer mistakes in your code and therefore, your results.
+
+In a [clean/tidy dataset](https://en.wikipedia.org/wiki/Tidy_data):
+
++ each variable has its own column
++ each observation of that variable is in a different row (this is long format data; we'll get to this later)
++ if you have multiple related tables, they should include a column in the table that allows them to be linked
+
+Read about `?mutate`. It is your base command in `dplyr` within the tidyverse for generating and replacing variables within a dataset. It can be combined with conditions for changes within your data. Type `?gsub` in your console and read it. It brings up some base string functions in R. You can use these to make substring changes to character objects. `if`, `ifelse` and `case_when` are really good verbs [the fancy R word for commands] for conditional data cleaning. Remember your operators, here and elsewhere, we will use logical operators AND `&` (A AND B must be true), OR `|` (A OR B must be true) and brackets `()`.
+
+> TASK 6: investigate the dataset. are there missing or inconsistent data? if so, are these random or systematic errors? do we have variables where values are given in multiple formats? Use these prompts to clean your data
+
+```{r data_cleaning}
+# check this data before, see how its inputted in multiple formats, dont forget missing data
+table(dt$sex, useNA="a")
+table(dt$species, useNA="a")
+
+# grep/grepl is string matching for character variables. super helpful.
+# have to use grepl instead of grep because it creates a vector of the same length as the dataset
+head(dt$sex)
+length(grepl("^m", ignore.case=TRUE,dt$sex))
+length(grep("^m", ignore.case=TRUE,dt$sex))
+
+
+# within a single mutate() we can alter several variables, seperated with ","
+dt <- dt %>%
+  mutate(
+  # using case_when which allows several if-then criteria to be run sequentially
+    sex=case_when(
+      grepl("^m",sex, ignore.case=TRUE) ~ "Male",
+      grepl("^f",sex, ignore.case=TRUE) ~ "Female",
+      TRUE ~ "Unknown"),
+# making healthcare ID a number
+    healthcare_id=as.integer(healthcare_id),
+# making the species name an uppercase
+    species=toupper(species),
+    soundex=gsub("",NA,soundex)) %>%
+  mutate(species=as.factor(species))
+
+
+# check the changes went through
+# dont forget missing data
+table(dt$species,dt$sex, useNA="a")
+```
+
+Many datasets are plagued by issues of duplicate data. This is especially true of surveillance datasets, where data may be coming in from multiple sources. Depending on your dataset, and the specifics of the data being collected, this can be a relatively simple or very complex step. Often it will take you several stages to deduplicate your data. There are many ways to remove duplicates, one way uses the `dplyr::distinct` command.
+
+This dataset contains laboratory surveillance data. In some cases a lab may run a blood sample more than once, and therefore we may have multiple records of the same infection episode. Alternatively, a hospital could send a blood sample to more than one lab; to address this, you'll need to deduplicate based on a subset of variables within the dataset. You will need to use two different deduplication criteria (2 lines) to remove all the records.
+
+Never change the original spreadsheet dataset. Seriously. Don't do it. We can store multiple datasets in R, save an object containing your raw-uncleaned/undeduplicated dataset. If you ever make a mistake, just fix it and go back to the raw object. You can always delete the object at the end when your happy. Your R script gives you an excellent audit trail.
+
+> TASK 8: check for any duplicates records and remove them
+
+> TASK 9: save your cleaned dataset as a new file
+
+```{r deduplicate}
+
+nrow(dt) # spits out the number of rows in a dataset
+
+# there is no point in saving a new file since this is R, not stata
+# just save the raw dataset (un-deduplicated) as a new object
+dt_raw <- dt
+
+# deduplicate on all rows
+dt <- dt %>%
+  arrange(specimen_date) %>% # deduplication keeps the top observation
+  distinct() # distinct keeps the first record in a set of duplicates
+nrow(dt)
+
+# deduplicate on a select number of variables
+dt <- dt %>%
+  arrange(specimen_date) %>%
+  distinct(healthcare_id,sex,soundex,birth_date,specimen_date,species, .keep_all = T)
+nrow(dt)
+
+```
+
+
+# Data Management
+
+We've cleaned the dataset. The key in data management is creating new variables. These variables will contain flags, summary data, or key identifiers which we will use for further modification. A properly managed dataset will be ready to share with others for analysis.
+
+## Derived variables
+
+Derived variables use the existing data to create new variables which summarise your results in a more meaningful way. Or they may be flag variables. A flag variable is a variable coded 0/1 which helps to tell you something about your dataset and is used for manipulation or analysis.
+
+For example, sometimes you don't want to drop records, but flag which ones should be omitted from analysis. So you could make a variable `_drop` in which you flag records 1 which should be omitted; you will need to ensure that you account for this in your code. Or perhaps your data contains onset and exposure dates, but you are going to be doing your analysis only on those with <72 hour incubation time; create a flag variable for these individuals. 
+
+> TASK 10: create a new variable for year, using specimen_date
+
+> TASK 11: calculate age in years at time of specimen
+
+> TASK 12: calculate age groups [<1, 1-4, 5-14, 15-29, 30-49, 50-74, 75+], label the variable values using the groups above and check the new categorical variable against the continuous one
+
+```{r year_var}
+# year() is from the lubridate package
+# when you do date-date, it results in class difftime, needs to be coerced into an number format for further analysis
+# agegroup is now an ordered factor
+
+dt <- dt %>% 
+  mutate(year=year(specimen_date),
+         age=as.integer((specimen_date-birth_date)/365.25),
+         agegrp=cut(age,
+                    breaks=c(0,1,5,15,30,50,75,999),
+                    levels=c("<1y","1-4y","5-14y","15-29y","30-49y","50-74y","75+y"),
+                    right=F))
+
+# check the results
+table(dt$year)
+table(dt$age,dt$agegrp)
+
+```
+
+
+## `dplyr::group_by()`
+
+`group_by` is a `dplyr` verb that groups observations, allowing you to perform functions within the group. It is super powerful and has many practical uses, a few of which we will cover later in this section. In this case, we are going to group records,  replacing an ID value, so that each matching record within the group has the same ID.
+
+> TASK 13: create a patientID
+
+```{r patient_id}
+
+  dt$id <- as.numeric(1:nrow(dt)) # create a new var with seqential numbers starting at 1
+
+# these healthcare id numbers are proxys for "UNKNOWN"
+  healthcare_id_unknown <- c(000000000,123456789,999999999,NA)
+  
+# %in% allows you to set multiple criteria for inclusion or exclusion
+# it is also way more forgiving around NA values compared to the absolute criteria with ==
+  
+# here we are saying if the healthcare_id is one of the known missing values we use the ifelse statement
+# if its NOT missing (!healthcare_id)  we set the id variable with the top observation value per group
+# otherwise, it retains its existing value
+
+  dt <- dt %>% ungroup() %>%
+    arrange(specimen_date) %>%
+    group_by(healthcare_id, birth_date) %>% 
+    mutate(id=ifelse(!healthcare_id %in% healthcare_id_unknown & birth_date!="1900-01-01",
+                     id[1],id)) %>% 
+    ungroup() %>%
+    group_by(hospital_id, birth_date) %>%
+    mutate(id=ifelse(!is.na(hospital_id) & birth_date!="1900-01-01",
+                     id[1],id)) %>% 
+    ungroup() %>%
+    group_by(hospital_id, specimen_id) %>%
+    mutate(id=ifelse(!is.na(hospital_id) & !is.na(specimen_id),
+                     id[1],id)) %>% 
+    ungroup() %>%
+    group_by(soundex, sex, birth_date) %>%
+    mutate(id=ifelse(birth_date!="1900-01-01" & !is.na(soundex) & !is.na(sex),
+                     id[1],id)) %>%
+    ungroup() %>% select(1:id)
+  
+```
+
+
+> TASK 14: using your patientID, create a new variable which contains the total number of infections per person ID and a second variable which flags the first time an individual had an infection per organism each year
+
+```{r infections_per_id}
+
+dt <- dt %>%
+  arrange(specimen_date) %>%
+  group_by(id) %>%
+  mutate(infections=length(id)) %>%
+  group_by(id,species,year) %>%
+  mutate(first_infection=ifelse(row_number()==1,1,0))
+
+table(dt$infections,dt$first_infection)
+
+```
+
+
+> TASK 15: using your patientID and total infections variable, generate a new variable which tags records where the individual had a concurrent infection with more than one organism on the same specimen date
+
+> TASK 16: save your dataset
+
+```{r concurrent_infections}
+dt <- dt %>% ungroup() %>%
+    arrange(species) %>%
+    group_by(id,infections,specimen_date) %>%
+    mutate(poly_infection=ifelse(species[1]!=last(species),1,0))
+  
+```
+
+
+# Data Manipulation
+
+## Reshaping
+
+> TASK 17: summarise your dataset to give counts of the number of infection episodes in each area per organism per year
+
+
+```{r counts_subnational}
+# note that area name is missing for a whole year, so we use area_code instead
+
+counts_area <- dt %>% ungroup() %>% 
+  group_by(year,area_code,species) %>% 
+  summarise(n=n())
+
+```
+
+> TASK 18: summarise your dataset to give the national counts of the number of infection episodes per year
+
+```{r counts_national}
+# note that area code is missing, we need to create it
+
+counts_national <- dt %>% ungroup() %>% 
+  group_by(year,species) %>% 
+  mutate(area_code="X9") %>%
+  summarise(n=n())
+
+```
+
+> TASK 19: join the two summary tables (area level and national)
+
+```{r combine_rows_counts}
+
+counts <- bind_rows(counts_area,counts_national)
+
+```
+
+
+> TASK 20: reshape your data in preparation to join to population data
+
+```{r reshape_counts}
+
+counts <- counts %>% 
+  spread(year,n) %>%
+  rename(n2015=`2015`,
+         n2016=`2016`,
+         n2017=`2017`)
+
+```
+
+
+## Joining data
+
+> TASK 21: join the population data onto your dataset
+
+```{r population_data}
+
+pop_data <- read.csv("./r_datamgmt/data/area_population.csv", stringsAsFactors = F)
+pop_data
+
+pop_data <- select(pop_data,area_code,area_name,pop2015,pop2016,pop2017)
+
+counts <- inner_join(counts,pop_data, by="area_code")
+
+```
+
+
+> TASK 22: calculate annual incidence rates per 100,000 population
+
+```{r incidence_rates}
+counts <- counts %>%
+  mutate(rate2015=n2015/pop2015*100000,
+         rate2016=n2016/pop2016*100000,
+         rate2017=n2017/pop2017*100000)
+counts
+```
+
+
+> TASK 23: order and sort and label your variables in a logical way and export data to a new xlsx file in 3 sheets called inc_genusname
+
+```{r export_incidence}
+
+sp <- levels(counts$species)
+
+# openxlsx is a package for working with xlsx files
+# here we create a blank workbook, then in the for() loop we are adding new sheets
+# this package creates a virtual xlsx file in R then at the end creates the file with saveWorkbook
+wb <- createWorkbook()
+
+for(i in sp){
+  print(i)
+  tab_name <- word(i)
+  export <- counts %>% 
+    filter(species==i) %>% 
+    ungroup() %>%
+    select(area_name,species,rate2015,rate2016,rate2017)
+  sheet <- addWorksheet(wb=wb, sheetName=paste("INC",tab_name,sep="_"))
+  writeDataTable(wb=wb, sheet=paste0("INC_",tab_name), x=export)
+}
+
+saveWorkbook(wb, "./exports/R_output.xlsx", overwrite=TRUE)
+
+```
+
+
+> TASK 24: create a new summary table of infection episodes per year and month for each organism
+
+```{r agesex}
+
+# epicurve uses a complete line list
+
+agesex <- dt %>% ungroup() %>%
+  group_by(agegrp,sex,species) %>%
+  summarise(n=n())
+
+agesex
+
+```
+
+
+# Data Visualisation
+
+> TASK 25: shape your data in a format that allows you to make an epicurve and age sex pyramid save the images as png files
+
+## Epidemic Curve
+
+If you havent installed the EpiFunc package, that will need to be done first. Use the help functions `r ?epicurve` and `r ?age_sex_pyramid` to learn how to use the functions.
+
+
+```{r Epidemic_Curve, out.width="100%"}
+
+## create a dataset which groups records by isoweek giving counts/species
+epic <- dt %>% filter(year(specimen_date)==2017) %>% # just want 1 year
+  mutate(isoweek=as.numeric(isoweek(specimen_date))) %>% # get the isoweek, save as a number
+  group_by(isoweek,species) %>% # set your groupings
+  summarise(count=n()) %>% # simplify the dataset by the grouping
+  ungroup() %>% # you need to ungroup if you're going to modify a grouping variable
+  mutate(isoweek=factor(isoweek)) ## this preserves the order
+
+# plot epicurves using ggplot
+epicurve <- ggplot(epic,
+       aes(x=isoweek,
+           y=count,
+       fill=species)) +
+  geom_bar(stat="identity") +
+  facet_grid(species~.) +
+  theme(strip.text.y=element_text(size=6),
+        strip.background=element_blank(),
+        legend.position="bottom",
+        legend.text=element_text(size=8),
+        axis.text.x=element_text(size=6))
+
+epicurve
+
+# save the image.
+ggsave(plot=epicurve,
+       filename = "./exports/epicurve.png", 
+       device = "png", 
+       height = 6, width = 12, units = "in")
+
+
+```
+
+## Age Sex Pyramid 
+
+```{r AgeSex_Pyramid, out.width="100%"}
+
+## create a dataset which groups records by isoweek giving counts/species
+agesex <- dt %>% 
+  filter(year(specimen_date)==2017,
+         sex!="Unknown") %>% # just want 1 year
+  group_by(agegrp,sex,species) %>% # set your groupings
+  summarise(count=n()) # simplify the dataset by the grouping
+
+lim <- 10^ceiling(log10(max(agesex$count))) # grabbing the maximum value
+
+# plot age sex pyramid using ggplot
+agesex_pyramid <- ggplot(agesex,
+                         aes(x=agegrp,
+                             y=count,
+                             fill=sex)) +
+  geom_bar(data=subset(agesex,sex=="Male"),aes(y=count*-1),stat="identity") +
+  geom_bar(data=subset(agesex,sex=="Female"),stat="identity") +
+  scale_x_discrete("Age Group (Years)", 
+                   labels=c("<1","1-4","5-14","15-29","30-49","50-74","75+")) +
+  scale_y_continuous("Number of cases",
+                   labels=abs(seq(-lim,lim,lim/5)), # we want absolute values
+                   limits=c(-lim,lim),
+                   breaks=seq(-lim,lim,lim/5)) +
+  theme(strip.text.y=element_text(size=6),
+        strip.background=element_blank(),
+        legend.position="bottom",
+        legend.text=element_text(size=7),
+        axis.text.x=element_text(size=6)) +
+  facet_grid(species~.) +
+  coord_flip() # this flips the x and y coordinates
+
+agesex_pyramid
+
+# save the image.
+ggsave(plot=agesex_pyramid,
+       filename = "./exports/agesex_pyramid.png", 
+       device = "png", 
+       height = 9, width = 12, units = "in")
+
+
+```
+
+> TASK 27: compare your final results against the file in outputs\summary.xlsx
+
+

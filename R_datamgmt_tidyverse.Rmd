@@ -2,10 +2,10 @@
 title: "R Data Management"
 author: "Alex Bhattacharya"
 date: "`r format(Sys.Date(),'%d %b %Y')`"
-code_folding: "hide"
 output:
   html_document:
     theme: yeti 
+    code_folding: hide
     toc: yes
     toc_depth: 4
     toc_float:
@@ -99,6 +99,7 @@ This should always be in the first set of commands within your R code. The only 
 R requires you use the `/`  or `\\` for file paths as `\` is an escape character. Escape characters are used before another character to inform the program (R) that the next character is not meant to be intrepreted as code. For example, in `\\` the first `\` is an escape, to allow you to use the second `\` as the backslash in a filepath.
 
 ```{r setwd, eval=FALSE}
+
 setwd("F:/alex.bhattacharya/teaching/code/data_management_tutorial")
 ```
 
@@ -116,9 +117,9 @@ As mentioned previously, R will natively import a `.csv` but will not do the sam
 
 ```{r import_data}
 # the ./ means home directory then the subfolders afterwards
-dt15 <- read.csv("./r_datamgmt/data/line_list_2015.csv", stringsAsFactors=FALSE)
-dt16 <- read.xlsx("./r_datamgmt/data/line_list.xlsx", sheet="2016", detectDates=TRUE)
-dt17 <- read.xlsx("./r_datamgmt/data/line_list.xlsx", sheet="2017", detectDates=TRUE)
+dt15 <- read.csv("./data/line_list_2015.csv", stringsAsFactors=FALSE)
+dt16 <- read.xlsx("./data/line_list.xlsx", sheet="2016", detectDates=TRUE)
+dt17 <- read.xlsx("./data/line_list.xlsx", sheet="2017", detectDates=TRUE)
 ```
 
 > TASK 3: explore the tables, note any differences and modify the tables so that they have the same structure, save each of your modified tables
@@ -214,7 +215,8 @@ dt <- dt %>%
 # making the species name an uppercase
     species=toupper(species),
     soundex=gsub("",NA,soundex)) %>%
-  mutate(species=as.factor(species))
+  mutate(species=factor(species),
+         sex=factor(sex,levels=c("Male","Female","Unknown")))
 
 
 # check the changes went through
@@ -399,15 +401,19 @@ counts <- bind_rows(counts_area,counts_national)
 ```
 
 
-> TASK 20: reshape your data in preparation to join to population data
+> TASK 20: import and reshape your population data in preparation to join to count data
 
 ```{r reshape_counts}
 
-counts <- counts %>% 
-  spread(year,n) %>%
-  rename(n2015=`2015`,
-         n2016=`2016`,
-         n2017=`2017`)
+pop_data <- read.csv("./data/area_population.csv", stringsAsFactors = F)
+pop_data
+
+## gather reshapes from wide to long gather(new_header_col,new_data_col,-all_other_cols
+pop_data <- pop_data %>%
+  gather(year,population,-contains("area_")) %>%
+  mutate(year=as.numeric(gsub("pop","",year)))
+
+pop_data
 
 ```
 
@@ -415,27 +421,26 @@ counts <- counts %>%
 ## Joining data
 
 > TASK 21: join the population data onto your dataset
+> TASK 22: calculate annual incidence rates per 100,000 population and reshape to export a wide publication table (mimic table in summary.xlsx)
 
-```{r population_data}
+```{r join_incidence}
 
-pop_data <- read.csv("./r_datamgmt/data/area_population.csv", stringsAsFactors = F)
-pop_data
+## inner_join uses the first dataset as master, any mismatches from the 2nd are dropped
 
-pop_data <- select(pop_data,area_code,area_name,pop2015,pop2016,pop2017)
+rates <- inner_join(counts,pop_data, 
+                     by=c("area_code","year")) %>% 
+  ungroup() %>%
+  mutate(rate=n/population*100000,
+         year=as.integer(year))
+rates ## data in long format
 
-counts <- inner_join(counts,pop_data, by="area_code")
+## spread reshapes from long to wide
+rate_export <- rates %>% ungroup() %>%
+  arrange(species,area_code) %>%
+  select(species,area_name,rate,year) %>%
+  spread(year,rate,fill=0) 
+rate_export
 
-```
-
-
-> TASK 22: calculate annual incidence rates per 100,000 population
-
-```{r incidence_rates}
-counts <- counts %>%
-  mutate(rate2015=n2015/pop2015*100000,
-         rate2016=n2016/pop2016*100000,
-         rate2017=n2017/pop2017*100000)
-counts
 ```
 
 
@@ -453,10 +458,10 @@ wb <- createWorkbook()
 for(i in sp){
   print(i)
   tab_name <- word(i)
-  export <- counts %>% 
+  export <- rate_export %>% 
     filter(species==i) %>% 
     ungroup() %>%
-    select(area_name,species,rate2015,rate2016,rate2017)
+    select(area_name,species,`2015`,`2016`,`2017`)
   sheet <- addWorksheet(wb=wb, sheetName=paste("INC",tab_name,sep="_"))
   writeDataTable(wb=wb, sheet=paste0("INC_",tab_name), x=export)
 }
@@ -468,50 +473,43 @@ saveWorkbook(wb, "./exports/R_output.xlsx", overwrite=TRUE)
 
 > TASK 24: create a new summary table of infection episodes per year and month for each organism
 
-```{r agesex}
-
-# epicurve uses a complete line list
-
-agesex <- dt %>% ungroup() %>%
-  group_by(agegrp,sex,species) %>%
-  summarise(n=n())
-
-agesex
-
-```
-
-
 # Data Visualisation
 
-> TASK 25: shape your data in a format that allows you to make an epicurve and age sex pyramid save the images as png files
+We're going to use `ggplot2` to create some visualisations. Feel free to get creative with this part.
+I suggest you tinker with the options and see how they affect the outputs. I've chosen to facet the graphs by species. This is entirely up to you. Faceting just provides a quick and easy way to look at simliar visualistaions in a directly comparable way.
+
+> TASK 25: shape your data in a format that allows you to make an epicurve, age sex pyramid and incidence trends save the images as png files
 
 ## Epidemic Curve
 
-If you havent installed the EpiFunc package, that will need to be done first. Use the help functions `r ?epicurve` and `r ?age_sex_pyramid` to learn how to use the functions.
-
+Think about how your data needs to be formatted. Task 24 is a pretty clear giveaway. Alternatively we could do it over ISO weeks, but lets stick to the full time series and months for now. 
 
 ```{r Epidemic_Curve, out.width="100%"}
 
 ## create a dataset which groups records by isoweek giving counts/species
-epic <- dt %>% filter(year(specimen_date)==2017) %>% # just want 1 year
-  mutate(isoweek=as.numeric(isoweek(specimen_date))) %>% # get the isoweek, save as a number
-  group_by(isoweek,species) %>% # set your groupings
+epic <- dt %>% 
+  mutate(month=as.numeric(month(specimen_date))) %>% # get the isoweek, save as a number
+  group_by(year,month,species) %>% # set your groupings
   summarise(count=n()) %>% # simplify the dataset by the grouping
   ungroup() %>% # you need to ungroup if you're going to modify a grouping variable
-  mutate(isoweek=factor(isoweek)) ## this preserves the order
+  arrange(year,month,species) %>%
+  mutate(time=factor(paste(year,ifelse(month<10,paste0("0",month),month)))) ## this preserves the order
 
 # plot epicurves using ggplot
 epicurve <- ggplot(epic,
-       aes(x=isoweek,
+       aes(x=time,
            y=count,
        fill=species)) +
   geom_bar(stat="identity") +
+  scale_y_continuous("Number of cases") +
+  scale_x_discrete("Year Month") +
   facet_grid(species~.) +
+  theme_bw() +
   theme(strip.text.y=element_text(size=6),
         strip.background=element_blank(),
         legend.position="bottom",
         legend.text=element_text(size=8),
-        axis.text.x=element_text(size=6))
+        axis.text.x=element_text(size=8, angle=90, vjust=0.5))
 
 epicurve
 
@@ -526,6 +524,8 @@ ggsave(plot=epicurve,
 
 ## Age Sex Pyramid 
 
+Here we want to look at all three age-sex pyramids, but since the count of cases for E. coli is so much higher, lets look at the age-sex as proportions. Limit the dataset to a single year.
+
 ```{r AgeSex_Pyramid, out.width="100%"}
 
 ## create a dataset which groups records by isoweek giving counts/species
@@ -533,23 +533,27 @@ agesex <- dt %>%
   filter(year(specimen_date)==2017,
          sex!="Unknown") %>% # just want 1 year
   group_by(agegrp,sex,species) %>% # set your groupings
-  summarise(count=n()) # simplify the dataset by the grouping
+  summarise(count=n()) %>% # simplify the dataset by the grouping
+  ungroup() %>%
+  group_by(species) %>%
+  mutate(p=count/sum(count,na.rm=T)) 
 
-lim <- 10^ceiling(log10(max(agesex$count))) # grabbing the maximum value
+lim <- max(agesex$p)*1.2 # grabbing the maximum value
 
 # plot age sex pyramid using ggplot
 agesex_pyramid <- ggplot(agesex,
                          aes(x=agegrp,
-                             y=count,
+                             y=p,
                              fill=sex)) +
-  geom_bar(data=subset(agesex,sex=="Male"),aes(y=count*-1),stat="identity") +
   geom_bar(data=subset(agesex,sex=="Female"),stat="identity") +
+  geom_bar(data=subset(agesex,sex=="Male"),aes(y=p*-1),stat="identity") +
   scale_x_discrete("Age Group (Years)", 
                    labels=c("<1","1-4","5-14","15-29","30-49","50-74","75+")) +
-  scale_y_continuous("Number of cases",
-                   labels=abs(seq(-lim,lim,lim/5)), # we want absolute values
+  scale_y_continuous("Proportion of cases",
+                   labels=paste0(round(abs(seq(-lim,lim,.1))*100),"%"), # we want absolute values
                    limits=c(-lim,lim),
-                   breaks=seq(-lim,lim,lim/5)) +
+                   breaks=seq(-lim,lim,.1)) +
+  theme_bw() +
   theme(strip.text.y=element_text(size=6),
         strip.background=element_blank(),
         legend.position="bottom",
@@ -569,6 +573,40 @@ ggsave(plot=agesex_pyramid,
 
 ```
 
-> TASK 27: compare your final results against the file in outputs\summary.xlsx
+
+## Graphing Incidence
+
+Lets plot incidence just in case we didnt want to have a table. Why use numbers when you can use a picture!
+
+```{r incidence_graph}
+
+## An alternative to printing out a table is making a visualisation
+
+maxrate <- round(max(rates$rate)+5)
+
+incidence <- ggplot(rates,
+                    aes(x=year,
+                        y=rate,
+                        color=area_name)) +
+  scale_color_discrete("PHE Region") +
+  geom_line() +
+  scale_x_continuous("Year",labels=function(x) floor(x)) +
+  scale_y_continuous("Rate",
+                     limits=c(0,maxrate),
+                     breaks=seq(0,maxrate,10)) +
+  facet_grid(.~species) +
+  theme_bw() +
+  theme(legend.position="bottom",
+        panel.grid = element_blank()) 
+
+incidence
+
+ggsave(plot=incidence,
+       filename = "./exports/incidence.png", 
+       device = "png", 
+       height = 6, width = 12, units = "in")
+```
+
+> TASK 27: compare your final results against the file in outputs\summary.xlsx and the three .png graphs
 
 

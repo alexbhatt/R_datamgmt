@@ -1,6 +1,6 @@
 ---
 title: "R Data Management"
-author: "Alex Bhattacharya"
+author: "Alex Bhattacharya & Paula Blomquist, Field Serivce NW PHE"
 date: "`r format(Sys.Date(),'%d %b %Y')`"
 output:
   html_document:
@@ -23,19 +23,22 @@ options(scipen=999)
 ```
 # Data in R
 
-If you're coming from Stata, well then this part kinda sucks. R can hold multiple bits of data. I say bits because that can include a single number or string, or a combination of related/same type (vectors) or unrelated/different types (lists) of data. Or, it can be what we more traditionally think of a rectangular data set, called a data frame made up of columns of vectors, or rows of matching lists.
+If you're coming from Stata, well then this part kinda sucks, if not, great! R can hold multiple types of data. <font color="red"> **I'm not sure 'bits' is the best terminology here, particularly as data bits is totally different in computer science. Can you call already introduce the terminology 'objects'?  ** </font> I say bits because that can include a single number or string, or a combination of related/same type (vectors) or unrelated/different types (lists) of data. Or, it can be what we more traditionally think of a rectangular data set, called a data frame made up of columns of vectors, or rows of matching lists. <font color="red"> **Is the latter considered a data frame?** </font> 
+
 
 ## Objects
 
-When you're totally confused and reading on StackOverflow or some other R blog on how to do a thing. You'll see people refering to objects. This is when you store a thing in a thing using the assignment operator `<-`. This means store the thing on the right of the `<-` in an object called the thing on the left of the `<-`. 
+When you're totally confused and reading on StackOverflow or some other R blog on how to do a thing. <font color="red"> **Unecessary to mention stackoverflow so early on?** </font> You'll see people refering to objects. This is when you store a thing in a thing <font color="red"> **(Alex! A thing in a thing?) ** </font>  using the assignment operator `<-`. This means store the thing on the right of the `<-` in an object called the thing on the left of the `<-`. 
 
 When you're working in R, all your objects are stored in your "Global Environment". Think of it like your desk. Anything on the desk is fair game. But unless you save the object using `<-`, its not on your desk, its not in the environment. 
 
+<font color="red"> **Is it possible to show a picture of the environment and some objects in it?** </font> 
+
 ## Data types
 
-Data can be a few things, but it comes down to three simple types in R. Numbers, characters (strings), and logical (TRUE/FALSE). Like Stata, dates are also a pain and have their own extra format but are still just numbers; [a quick 1 pg help on dates in R can be found here](https://www.statmethods.net/input/dates.html).
+Data can be a few things, but it comes down to three simple types in R <font color="red"> **Simplify: "There are three simple data types in R?** </font>. Numbers, characters (strings), and logical <font color="red"> **Aka boolean?** </font>  (TRUE/FALSE). Like Stata, dates are also a pain and have their own extra format but are still just numbers; [a quick 1 pg help on dates in R can be found here](https://www.statmethods.net/input/dates.html).
 
-The table below has the three data types shown.
+The table below has the three data types shown. <font color="red"> **As it's the first code chunk, you can instruct 'click on 'code' to see the code that generates the table'** </font>. 
 
 ```{r object_types} 
 # these are vectors, they all have the same type
@@ -54,8 +57,9 @@ names(sw) <- c("Film", "Episode","Rank","Has Jar Jar Binks")
 sw
 ```
 
-here is a row from the data frame, an example of a list (but not actually a list because its in a data frame)
-read as from the sw data, take the 2nd row, and columns 1 to 3
+Below is a row from the data frame, an example of a list (but not actually a list because its in a data frame)
+read as from the sw data, take the 2nd row, and columns 1 to 3 <font color="red"> **Expand on this or remove** </font>. 
+
 
 ```{r list}
 # the row from the data
@@ -72,7 +76,7 @@ I recommend doing a free datacamp [intro to R](https://www.datacamp.com/courses/
 
 ## Install and load packages
 
-R has a base code, which is default. However, people have built packages which contain functions. These functions can make your life easier as they can help with processes in a way which is simpler than using base R. We're gonna use the tidyverse package and syntax from here on out.
+R has a base code, which is default <font color="red"> **How about "The original coding language in R is called 'base R'. However keen members of the R community have built packages that improve functionality but use different syntax...""  ** </font>. However, people have built packages which contain functions. These functions can make your life easier as they can help with processes in a way which is simpler than using base R. We're gonna use the tidyverse package and syntax from here on out.
 
 ```{r install, eval=FALSE, message=FALSE, results='hide', echo=FALSE}
 # install the packages you need for your code
@@ -86,6 +90,8 @@ Key to the tidyverse is that all related packages use a similar shared syntax an
 
 By using `library(tidyverse)` you are actually loading in a series of packages. `lubridate` is not packaged with `tidyverse` but uses the same syntax and works seamlessly. It is a package just for using dates (and date related math) in R. R does not natively open excel xls/xlsx files, `openxlsx` is a great tool for reading/writing xlsx files.
 
+<font color="red"> **Can you bullet point the mention of the three packages so easier to follow?. Also I think you should more clearly state what these two chunks do, as you don't say at any point you will install (aside from the title)** </font>
+
 ```{r library, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(lubridate)
@@ -94,9 +100,9 @@ library(openxlsx)
 
 > TASK 1: set the working directory to your project folder
 
-This should always be in the first set of commands within your R code. The only exception to this is if you are working in an Rmarkdown file (`.Rmd`). These default the working directory to the folder where the `.Rmd` file is stored. It is how you will navigate around the different files that you will be accessing or creating. It also means that if someone wants to use your code, and they have the files, they only have to change the directory here, and not every time a file is referenced within the code.
+<font color="red"> **Can you add definition (it should be obvious but just in case), i.e. 'the working directory is where on your computer or network your files are saved. Also can mention the command here?** </font> This should always be in the first set of commands within your R code. The only exception to this is if you are working in an Rmarkdown file (`.Rmd`). These default the working directory to the folder where the `.Rmd` file is stored <font color="red"> **can you specify that code is therefore not required, as that's not clear** </font> . It is how you will navigate around the different files that you will be accessing or creating. It also means that if someone wants to use your code, and they have the files, they only have to change the directory here, and not every time a file is referenced within the code.
 
-R requires you use the `/`  or `\\` for file paths as `\` is an escape character. Escape characters are used before another character to inform the program (R) that the next character is not meant to be intrepreted as code. For example, in `\\` the first `\` is an escape, to allow you to use the second `\` as the backslash in a filepath.
+R requires you use the `/`  or `\\` for file paths,  <font color="red"> **as opposed to the single blackslash that is usually used (for instance in windows explorer) (** </font>  `\` <font color="red"> **), which in R** </font> is an escape character. Escape characters are used before another character to inform the program (R) that the next character is not meant to be intrepreted as code. For example, in `\\` the first `\` is an escape, to allow you to use the second `\` as the backslash in a filepath.
 
 ```{r setwd, eval=FALSE}
 
@@ -104,16 +110,18 @@ setwd("F:/alex.bhattacharya/teaching/code/data_management_tutorial")
 ```
 
 
-
 ## Import the data
 
 > TASK 2: import the spreadsheets from the data folder into Stata without making any modifications in excel
 
-Lets start small. Here we are going to learn how to bring data from spreadsheets into R. This is the most common way that you will receive data, and is an essential skill. Take a look, its different for csv vs xlsx. 
+Lets start small. Here we are going to learn how to bring data from spreadsheets into R. This is the most common way that you will receive data, and is an essential skill. Take a look, it's different for csv vs xlsx. 
 
 Remember, unlike Stata, R can have multiple datasets stored as objects in the environment at a time. The consequence is that we always have to tell R which dataset we're actually talking about.
 
-As mentioned previously, R will natively import a `.csv` but will not do the same for `.xls/.xsx` files. We use the native `read.csv` from base R, and `read.xlsx` from `openxlsx` to read in the data.
+As mentioned previously, R will natively import a `.csv` but will not do the same for `.xls/.xsx` files. We use the native `read.csv` from base R, and `read.xlsx` from <font color="red"> **the package you already installed** </font> `openxlsx` to read in the data.
+
+<font color="red"> **Should you specify what stringsasFactors and detectDates do? Maybe also how you can search to look at the other options?** </font> 
+
 
 ```{r import_data}
 # the ./ means home directory then the subfolders afterwards
@@ -123,6 +131,8 @@ dt17 <- read.xlsx("./data/line_list.xlsx", sheet="2017", detectDates=TRUE)
 ```
 
 > TASK 3: explore the tables, note any differences and modify the tables so that they have the same structure, save each of your modified tables
+
+<font color="red"> **Are the following tasks under this one? Not clear** </font> 
 
 > TASK 7: format your dates
 
@@ -134,7 +144,6 @@ When you explore your data:
 + take a look at the structure of the data
 + what are the names of the variables
 + are they of the same type (character,numeric,date,logical)
-
 
 ```{r explore_data}
 # look inside, what are the differences
@@ -158,6 +167,8 @@ dt17 <- dt17 %>%
   rename(lab=lab_id)
 ```
 
+<font color="red"> **You haven't introduced tidyverse/dplyr yet but have thrown in mutate...** </font> 
+
 > TASK 4: append the tables
 
 > TASK 5: save your new appended dataset with all three years data 
@@ -175,6 +186,8 @@ dt <- bind_rows(dt15,dt16,dt17)
 glimpse(dt)
 ```
 
+<font color="red"> **Should this be tasks 4 and 5 as the coding is combined?** </font> 
+
 # Data Cleaning
 This is when you modify your data by changing the original values within the dataset. It is important to record any and all changes in the R code, to ensure that you and others can reproduce the results in the future. Always leave comments as to why changes were made. Remember, we never change the original dataset; we will save these changes as a new version of the dataset.
 
@@ -185,10 +198,17 @@ In a [clean/tidy dataset](https://en.wikipedia.org/wiki/Tidy_data):
 + each variable has its own column
 + each observation of that variable is in a different row (this is long format data; we'll get to this later)
 + if you have multiple related tables, they should include a column in the table that allows them to be linked
++ <font color="red"> **each variable is formatted appropriately, e.g. numbers are not stored as string** </font> 
 
-Read about `?mutate`. It is your base command in `dplyr` within the tidyverse for generating and replacing variables within a dataset. It can be combined with conditions for changes within your data. Type `?gsub` in your console and read it. It brings up some base string functions in R. You can use these to make substring changes to character objects. `if`, `ifelse` and `case_when` are really good verbs [the fancy R word for commands] for conditional data cleaning. Remember your operators, here and elsewhere, we will use logical operators AND `&` (A AND B must be true), OR `|` (A OR B must be true) and brackets `()`.
+<font color="red"> **There are some key packages and commands used in data cleaning (I've edited this bit for clarity):** </font>
+
+ + <font color="red"> **The `dplyr` package is part of the tidyverse and includes a range of useful data management commands. This includes `mutate`, which generates and replaces variables within a datase. You can read further by typing `?mutate` in your console to see the help file.  (This replaces the next bit:)** </font> Read about `?mutate`. It is your base command in `dplyr` <font color="red"> **explain what dplyr is** </font>  within the tidyverse for generating and replacing variables within a dataset. It can be combined with conditions for changes within your data <font color="red"> **for instance ...  ** </font>. 
++ <font color="red"> **A useful package for maniupating strings is `gsub`....** </font> Type `?gsub` in your console and read it. It brings up some base string functions in R. You can use these to make substring changes to character objects. 
++ `if`, `ifelse` and `case_when` are really good verbs [the fancy R word for commands] for conditional data cleaning. Remember your operators, here and elsewhere, we will use logical operators AND `&` (A AND B must be true), OR `|` (A OR B must be true) and brackets `()`. 
 
 > TASK 6: investigate the dataset. are there missing or inconsistent data? if so, are these random or systematic errors? do we have variables where values are given in multiple formats? Use these prompts to clean your data
+
+<font color="red"> **A bit more detail here about e.g. the options, like what useNA="a" means. Grep not clear. Haven't explained length ** </font>
 
 ```{r data_cleaning}
 # check this data before, see how its inputted in multiple formats, dont forget missing data
@@ -200,7 +220,6 @@ table(dt$species, useNA="a")
 head(dt$sex)
 length(grepl("^m", ignore.case=TRUE,dt$sex))
 length(grep("^m", ignore.case=TRUE,dt$sex))
-
 
 # within a single mutate() we can alter several variables, seperated with ","
 dt <- dt %>%
@@ -259,11 +278,13 @@ nrow(dt)
 
 # Data Management
 
+<font color="red"> **Data management includes data cleaning so may want to think about the order here** </font> 
+
 We've cleaned the dataset. The key in data management is creating new variables. These variables will contain flags, summary data, or key identifiers which we will use for further modification. A properly managed dataset will be ready to share with others for analysis.
 
 ## Derived variables
 
-Derived variables use the existing data to create new variables which summarise your results in a more meaningful way. Or they may be flag variables. A flag variable is a variable coded 0/1 which helps to tell you something about your dataset and is used for manipulation or analysis.
+Derived variables use the existing data to create new variables which summarise your results in a more meaningful way <font color="red"> **, for instance a new categorial variable to summarise a continuous variable, or a flag variable which is coded 0 or 1 to tag particular rows of interest. (Drop next line) ** </font> . Or they may be flag variables. A flag variable is a variable coded 0/1 which helps to tell you something about your dataset and is used for manipulation or analysis.
 
 For example, sometimes you don't want to drop records, but flag which ones should be omitted from analysis. So you could make a variable `_drop` in which you flag records 1 which should be omitted; you will need to ensure that you account for this in your code. Or perhaps your data contains onset and exposure dates, but you are going to be doing your analysis only on those with <72 hour incubation time; create a flag variable for these individuals. 
 
@@ -297,7 +318,9 @@ table(dt$age,dt$agegrp)
 
 `group_by` is a `dplyr` verb that groups observations, allowing you to perform functions within the group. It is super powerful and has many practical uses, a few of which we will cover later in this section. In this case, we are going to group records,  replacing an ID value, so that each matching record within the group has the same ID.
 
-> TASK 13: create a patientID
+> TASK 13: create patient ID
+
+<font color="red"> **I'm not sure all of these need to go into the hidden code chunk as they're quite important explanations  ** </font> 
 
 ```{r patient_id}
 
@@ -317,7 +340,7 @@ table(dt$age,dt$agegrp)
     arrange(specimen_date) %>%
     group_by(healthcare_id, birth_date) %>% 
     mutate(id=ifelse(!healthcare_id %in% healthcare_id_unknown & birth_date!="1900-01-01",
-                     id[1],id)) %>% 
+                     id[1],id))   %>% 
     ungroup() %>%
     group_by(hospital_id, birth_date) %>%
     mutate(id=ifelse(!is.na(hospital_id) & birth_date!="1900-01-01",
@@ -332,15 +355,23 @@ table(dt$age,dt$agegrp)
                      id[1],id)) %>%
     ungroup() %>% select(1:id)
   
+  
+  
+dt %>% arrange(id) %>% View()
+  
 ```
+
+<font color="red"> **Quite a mahoosive jump above - ifelse was briefly introduced earlier bt not the syntax ** </font>
 
 
 > TASK 14: using your patientID, create a new variable which contains the total number of infections per person ID and a second variable which flags the first time an individual had an infection per organism each year
 
+<font color="red"> **Why do you need to sort by healthcare id, and group by hospital id? ** </font>
+
 ```{r infections_per_id}
 
 dt <- dt %>%
-  arrange(specimen_date) %>%
+  arrange(id, specimen_date) %>%
   group_by(id) %>%
   mutate(infections=length(id)) %>%
   group_by(id,species,year) %>%
@@ -416,7 +447,7 @@ pop_data <- pop_data %>%
 pop_data
 
 ```
-
+<font color="red"> **Same comments as previously: use of some commands not yet discussed prior to code chunk (e.g. gather)** </font>
 
 ## Joining data
 
@@ -482,7 +513,7 @@ I suggest you tinker with the options and see how they affect the outputs. I've 
 
 ## Epidemic Curve
 
-Think about how your data needs to be formatted. Task 24 is a pretty clear giveaway. Alternatively we could do it over ISO weeks, but lets stick to the full time series and months for now. 
+Think about how your data needs to be formatted. Task 24 is a pretty clear giveaway. Alternatively we could do it over ISO weeks, but lets stick to the full time series and months for now. <font color="red"> **Define ISO weeks? Also first mutate should be corrected to say isomonth ** </font>
 
 ```{r Epidemic_Curve, out.width="100%"}
 
@@ -608,5 +639,4 @@ ggsave(plot=incidence,
 ```
 
 > TASK 27: compare your final results against the file in outputs\summary.xlsx and the three .png graphs
-
 
